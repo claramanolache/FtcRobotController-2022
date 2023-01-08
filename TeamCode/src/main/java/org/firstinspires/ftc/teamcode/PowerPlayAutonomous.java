@@ -166,10 +166,6 @@ public class PowerPlayAutonomous extends LinearOpMode {
         }
     }
 
-    public void forward(int distance) {
-
-    }
-
     /**
      * This function is executed when this Op Mode is selected from the Driver Station.
      */
@@ -197,30 +193,16 @@ public class PowerPlayAutonomous extends LinearOpMode {
         intakeMotor = hardwareMap.get(DcMotor.class, "motor6");
 
 
-        // Locations of the wheels relative to the robot center.
-        Translation2d m_frontLeftLocation =
-                new Translation2d(0.381, 0.381);
-        Translation2d m_frontRightLocation =
-                new Translation2d(0.381, -0.381);
-        Translation2d m_backLeftLocation =
-                new Translation2d(-0.381, 0.381);
-        Translation2d m_backRightLocation =
-                new Translation2d(-0.381, -0.381);
 
-        // Creating my kinematics object using the wheel locations.
-        MecanumDriveKinematics m_kinematics = new MecanumDriveKinematics
-                (
-                        m_frontLeftLocation, m_frontRightLocation,
-                        m_backLeftLocation, m_backRightLocation
-                );
         // Creating my odometry object from the kinematics object. Here,
         // our starting pose is 5 meters along the long end of the field and in the
         // center of the field along the short end, facing forward.
-        MecanumDriveOdometry m_odometry = new MecanumDriveOdometry
-                (
-                        m_kinematics, getGyroHeading(),
-                        new Pose2d(5.0, 13.5, new Rotation2d()
-                        );
+//        MecanumDriveOdometry m_odometry = new MecanumDriveOdometry
+//                (
+//                        m_kinematics, getGyroHeading(),
+//                        new Pose2d(5.0, 13.5, new Rotation2d()
+//                        );
+
         waitForStart();
 
         // Start clicked
@@ -255,6 +237,8 @@ public class PowerPlayAutonomous extends LinearOpMode {
         //moving to the right 2x
         distance = 200;
         double powered = 0.05;
+
+        // lf lb rf rb
         setEncoderPositions(-distance, distance, -distance, distance);
         setPowers(-powered, powered, -powered, powered);
         waitForIdleMotor();
