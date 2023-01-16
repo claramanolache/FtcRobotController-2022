@@ -58,27 +58,28 @@ import java.util.List;
 @Autonomous
 public class PowerPlayAuto extends LinearOpMode {
 
-    private void autoMode(double l) {
-        // Red F2 - 90
-        // Red F5 - 270
+    protected void autoMode(double l) {
+        // Red F2, Blue A5 - 90
+        // Red F5, Blue A2 - 270
         autoModeLR(l, 90);
     }
 
     // Red F2
-    private void autoModeLR(double l, double lr) {
+    void autoModeLR(double l, double lr) {
         // 10 inch from target
         turn(0.0);
-
-        // Move to detect position
-        move( 6, 0.0);
-
+        move( 3, 0.0);
         detect();
-
-        move( 11, 0.0);
+        if (objDetected == 0) {
+            objDetected = 1;
+        }
+        // Move to detect position
+        //move( 6, 0.0);
+        move( 16.75, 0.0);
 
         turn(lr);
 
-        move(7.5, lr);
+        move(7, lr);
 
         sleep(500);
         claw.setPosition(0.2);
@@ -90,13 +91,13 @@ public class PowerPlayAuto extends LinearOpMode {
 
         //driveSpeed1 = DRIVE_SPEED * 1.5;
 
-        //objDetected =2;
+        //objDetected = 3;
         // Based on detected object, go 1 to 3
         if (objDetected == 1) {
             move( -13, 0.0);
 
             turn(90);
-            move(24, 90);
+            move(25.5, 90);
 
             turn(0);
             move(48, 0);
@@ -110,7 +111,7 @@ public class PowerPlayAuto extends LinearOpMode {
             move(28, 270);
 
             turn(0);
-            move(48, 0);
+            move(45, 0);
         }
     }
 
@@ -774,7 +775,7 @@ public class PowerPlayAuto extends LinearOpMode {
         long startVision = System.currentTimeMillis();
 
         objDetected = 0;
-        while (System.currentTimeMillis() - startVision < 2000 && objDetected == 0) {
+        while (System.currentTimeMillis() - startVision < 4500 && objDetected == 0) {
             if (detectCone()) {
                 break;
             }
