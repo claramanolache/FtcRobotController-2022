@@ -1,5 +1,27 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.RobotLog;
+import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
+import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
+
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
 import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
 import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XZY;
@@ -32,97 +54,64 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * This file illustrates the concept of driving an autonomous path based on Gyro heading and encoder counts.
- * The code is structured as a LinearOpMode
- * <p>
- * The path to be followed by the robot is built from a series of drive, turn or pause steps.
- * Each step on the path is defined by a single function call, and these can be strung together in any order.
- * <p>
- * The code REQUIRES that you have encoders on the drive motors, otherwise you should use: RobotAutoDriveByTime;
- * <p>
- * This code ALSO requires that you have a BOSCH BNO055 IMU, otherwise you would use: RobotAutoDriveByEncoder;
- * This IMU is found in REV Control/Expansion Hubs shipped prior to July 2022, and possibly also on later models.
- * To run as written, the Control/Expansion hub should be mounted horizontally on a flat part of the robot chassis.
- * <p>
- * This sample requires that the drive Motors have been configured with names : left_drive and right_drive.
- * It also requires that a positive power command moves both motors forward, and causes the encoders to count UP.
- * So please verify that both of your motors move the robot forward on the first move.  If not, make the required correction.
- * See the beginning of runOpMode() to set the FORWARD/REVERSE option for each motor.
- * <p>
- * This code uses RUN_TO_POSITION mode for driving straight, and RUN_USING_ENCODER mode for turning and holding.
- * Note: You must call setTargetPosition() at least once before switching to RUN_TO_POSITION mode.
- * <p>
- * Notes:
- * <p>
- * All angles are referenced to the coordinate-frame that is set whenever resetHeading() is called.
- * In this sample, the heading is reset when the Start button is touched on the Driver station.
- * Note: It would be possible to reset the heading after each move, but this would accumulate steering errors.
- * <p>
- * The angle of movement/rotation is assumed to be a standardized rotation around the robot Z axis,
- * which means that a Positive rotation is Counter Clockwise, looking down on the field.
- * This is consistent with the FTC field coordinate conventions set out in the document:
- * ftc_app\doc\tutorial\FTC_FieldCoordinateSystemDefinition.pdf
- * <p>
- * Control Approach.
- * <p>
- * To reach, or maintain a required heading, this code implements a basic Proportional Controller where:
- * <p>
- * Steering power = Heading Error * Proportional Gain.
- * <p>
- * "Heading Error" is calculated by taking the difference between the desired heading and the actual heading,
- * and then "normalizing" it by converting it to a value in the +/- 180 degree range.
- * <p>
- * "Proportional Gain" is a constant that YOU choose to set the "strength" of the steering response.
- * <p>
- * Use Android Studio to Copy this Class, and Paste it into your "TeamCode" folder with a new name.
- * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
- */
 
-@TeleOp(name = "PowerPlay", group = "Robot")
-public class PowerPlay extends LinearOpMode {
+@Autonomous
+public class PowerPlayAuto extends LinearOpMode {
 
     private void autoMode(double l) {
+        // Red F2 - 90
+        // Red F5 - 270
+        autoModeLR(l, 90);
+    }
 
+    // Red F2
+    private void autoModeLR(double l, double lr) {
+        // 10 inch from target
         turn(0.0);
 
-        // To drop the cone
+        // Move to detect position
         move( 6, 0.0);
-        sleep(2000);
 
         detect();
 
-        move( 12, 0.0);
+        move( 11, 0.0);
 
-        turn(90);
+        turn(lr);
 
-        move(5.5, 90);
+        move(7.5, lr);
 
-        sleep(1000);
+        sleep(500);
         claw.setPosition(0.2);
-        sleep(750);
+        sleep(500);
 
         // Back from cone drop
-        move(-5, 90);
-
-        // Move back to start position
+        move(-8, lr);
         turn(0);
 
-        move(-16, 0);
+        //driveSpeed1 = DRIVE_SPEED * 1.5;
 
-        // Turn towards parking
-        turn(270.0);
-
-        move(26, 270);
-
-        // Move forward
-        turn(0.0);
-
-        move(58, 0);
-
-        turn(90.0);
+        //objDetected =2;
         // Based on detected object, go 1 to 3
-        move(36, 90);
+        if (objDetected == 1) {
+            move( -13, 0.0);
+
+            turn(90);
+            move(24, 90);
+
+            turn(0);
+            move(48, 0);
+
+        } else if (objDetected == 2) {
+            // Move back to start position
+            move(10, 0);
+        } else {
+            move( -15, 0.0);
+            turn(270);
+            move(28, 270);
+
+            turn(0);
+            move(48, 0);
+        }
     }
 
 
@@ -162,8 +151,8 @@ public class PowerPlay extends LinearOpMode {
 
     // These constants define the desired driving/control characteristics
     // They can/should be tweaked to suit the specific robot drive train.
-    static final double DRIVE_SPEED = 0.2;     // Max driving speed for better distance accuracy.
-    static final double TURN_SPEED = 0.1;     // Max Turn speed to limit turn rate
+    static final double DRIVE_SPEED = 0.3;     // Max driving speed for better distance accuracy.
+    static final double TURN_SPEED = 0.2;     // Max Turn speed to limit turn rate
     static final double HEADING_THRESHOLD = 0.2;    // How close must the heading get to the target before moving to next step.
     // Requiring more accuracy (a smaller number) will often make the turn take longer to get into the final position.
     // Define the Proportional control coefficient (or GAIN) for "heading control".
@@ -235,7 +224,7 @@ public class PowerPlay extends LinearOpMode {
 
         // Wait for the game to start (Display Gyro value while waiting)
         while (opModeInInit() && !isStopRequested()) {
-            detectCone();
+            //detectCone();
             //detectPos();
             sendTelemetry(true);
 
@@ -268,171 +257,14 @@ public class PowerPlay extends LinearOpMode {
         // Distance for auto mode.
         double l = 24;
 
-        autoMode = 0;
+        autoMode = 1;
 
         int powerset = 0;
-        while (opModeIsActive()) {
-            // Manual mode
-            if (gamepad1.x) {
-                autoMode = 0;
-                left_front.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                right_front.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                left_back.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                right_back.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                resetHeading();
-            }
 
-            // Move to auto-test mode - moves in 1 feet square
-            if (gamepad1.a) {
-                autoMode = 1;
-            }
-            if (autoMode == 0) {
-                // Manual controls
-                powerset = powerset + 1;
-                stickDriveForward = -gamepad1.left_stick_y;
-                double horizontal = gamepad1.right_stick_x;
-                double vertical = gamepad1.right_stick_y;
-                double pivot =  gamepad1.left_stick_x;
-                armLevel = gamepad2.right_stick_y;
+        autoMode(l);
 
-                turn = gamepad1.right_stick_x;
-
-
-                if (gamepad1.b) {
-                    driveStraight(DRIVE_SPEED, 4, 0);
-                }
-
-                // Calibration - move forward 1 foot
-                if (gamepad1.y) {
-                    turnToHeading(TURN_SPEED, 90);
-                }
-
-                int pa = 4;
-                //left_front.setPower((pivot + stickDriveForward + turn) / ( pa * left_front_adj));
-                //right_front.setPower((pivot + (stickDriveForward - turn)) / pa);
-
-                left_back.setPower((pivot + (stickDriveForward + turn)) / pa);
-                right_back.setPower((pivot + stickDriveForward - turn) / (pa));
-
-                left_front.setPower((pivot + stickDriveForward + turn) / (pa));
-                right_front.setPower((pivot + stickDriveForward - turn) / pa);
-
-                //left_back.setPower((pivot + vertical + horizontal) / pa);
-                //right_back.setPower((pivot + vertical - horizontal)/ pa);
-
-                // if (Pivot != 0) {
-                //      turnToHeading(TURN_SPEED, Pivot);
-                //      if (autoMode() != 1) {
-                //          return ;
-                //      }
-                //      holdHeading(TURN_SPEED, Pivot, 2);
-                //      if (autoMode() != 1) {
-                //          return ;
-                //      }
-                //  }
-                /*left_front.setPower(Pivot + stickDriveForward + horizontal);
-                right_front.setPower(-Pivot + (stickDriveForward - horizontal));
-                left_back.setPower(-Pivot + (stickDriveForward - horizontal));
-                right_back.setPower(Pivot + stickDriveForward + horizontal);*/
-                if (gamepad2.right_bumper) {
-                    claw.setPosition(0.5);
-                }
-                if (gamepad2.left_bumper) {
-                    claw.setPosition(0.3);
-                }
-                if (gamepad1.right_bumper) {
-                    claw.setPosition(0.5);
-                }
-                if (gamepad1.left_bumper) {
-                    claw.setPosition(0.3);
-                }
-                linearAsDcMotor.setPower(armLevel);
-                sendTelemetry(true);
-            }
-
-            if (autoMode == 1) {
-                autoMode(l);
-                autoMode = 1;
-            }
-
-        }
     }
 
-    private void squareOld(double l) {
-        // Square
-        turnToHeading(TURN_SPEED, 0.0);
-        if (autoMode() != 1) {
-            return;
-        }
-        holdHeading(TURN_SPEED, 0.0, 2);
-        if (autoMode() != 1) {
-            return ;
-        }
-        driveStraight(DRIVE_SPEED, l, 0.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-        turnToHeading(TURN_SPEED, 0.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-        holdHeading(TURN_SPEED, 0.0, 2);
-        if (autoMode() != 1) {
-            return ;
-        }
-        driveStraight(DRIVE_SPEED, -l, 0.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-
-        turnToHeading(TURN_SPEED, 0.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-        holdHeading(TURN_SPEED, 0.0, 2);
-        if (autoMode() != 1) {
-            return ;
-        }
-        driveStraight(DRIVE_SPEED, l, 0.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-
-        turnToHeading(TURN_SPEED, 90.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-        holdHeading(TURN_SPEED, 90.0, 2);
-        if (autoMode() != 1) {
-            return ;
-        }
-        driveStraight(DRIVE_SPEED, l, 90.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-
-        turnToHeading(TURN_SPEED, 180.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-        holdHeading(TURN_SPEED, 180.0, 2);
-        if (autoMode() != 1) {
-            return ;
-        }
-        driveStraight(DRIVE_SPEED, l, 180.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-        turnToHeading(TURN_SPEED, 270.0);
-        if (autoMode() != 1) {
-            return ;
-        }
-        holdHeading(TURN_SPEED, 270.0, 2);
-        if (autoMode() != 1) {
-            return ;
-        }
-        driveStraight(DRIVE_SPEED, l, 270.0);
-    }
 
     int autoMode() {
         if (gamepad1.x) {
@@ -584,11 +416,14 @@ public class PowerPlay extends LinearOpMode {
 
     }
 
+
+    double driveSpeed1 = DRIVE_SPEED;
+
     public void move(double distance, double heading) {
         if (autoMode() != 1) {
             return ;
         }
-        driveStraight(DRIVE_SPEED, distance, heading);
+        driveStraight(driveSpeed1, distance, heading);
     }
 
     public void turn(double heading) {
@@ -599,7 +434,7 @@ public class PowerPlay extends LinearOpMode {
         if (autoMode() != 1) {
             return ;
         }
-        holdHeading(TURN_SPEED, heading, 1);
+        holdHeading(TURN_SPEED, heading, 0.6);
     }
 
     /**
@@ -964,7 +799,7 @@ public class PowerPlay extends LinearOpMode {
 
                 detectDebug = "FOUND " + objDetected + " " +
                         recognition.getLabel() + " " + recognition.getConfidence() * 100;
-                // RobotLog.ii("DETECT", "%d %f %s", objDetected, recognition.getConfidence(), recognition.getLabel());
+                //RobotLog.ii("DETECT", "%d %f %s", objDetected, recognition.getConfidence(), recognition.getLabel());
 
                 return true;
             }
