@@ -283,9 +283,10 @@ public class PowerPlay extends LinearOpMode {
             }
 
             // Move to auto-test mode - moves in 1 feet square
-            if (gamepad1.a) {
+            if (gamepad1.b) {
                 autoMode = 1;
             }
+            if (gamepad2.dpad_down)
             if (autoMode == 0) {
                 // Manual controls
                 powerset = powerset + 1;

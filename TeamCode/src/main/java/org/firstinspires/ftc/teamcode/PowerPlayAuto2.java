@@ -1,6 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -8,55 +11,26 @@ import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
-import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
-import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
-import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XZY;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
 
-import com.qualcomm.hardware.bosch.BNO055IMU;
-
-import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
-import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
-import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
-import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
-
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
-import com.qualcomm.robotcore.util.RobotLog;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.openftc.apriltag.AprilTagDetection;
+import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+import org.openftc.easyopencv.OpenCvCameraRotation;
 
 import java.util.ArrayList;
-import java.util.List;
 
 
 @Autonomous
-public class PowerPlayAuto extends LinearOpMode {
+public class PowerPlayAuto2 extends LinearOpMode {
+
+    private ArrayList<AprilTagDetection> latestDetections;
 
     protected void autoMode(double l) {
         // Red F2, Blue A5 - 90
@@ -68,14 +42,13 @@ public class PowerPlayAuto extends LinearOpMode {
     void autoModeLR(double l, double lr) {
         // 10 inch from target
         turn(0.0);
-        move( 3, 0.0);
         detect();
         if (objDetected == 0) {
             objDetected = 1;
         }
         // Move to detect position
         //move( 6, 0.0);
-        move( 16.75, 0.0);
+        move(19.25, 0.0);
 
         turn(lr);
 
@@ -94,7 +67,7 @@ public class PowerPlayAuto extends LinearOpMode {
         //objDetected = 3;
         // Based on detected object, go 1 to 3
         if (objDetected == 1) {
-            move( -13, 0.0);
+            move(-13, 0.0);
 
             turn(90);
             move(25.5, 90);
@@ -106,7 +79,7 @@ public class PowerPlayAuto extends LinearOpMode {
             // Move back to start position
             move(10, 0);
         } else {
-            move( -15, 0.0);
+            move(-15, 0.0);
             turn(270);
             move(28, 270);
 
@@ -116,96 +89,21 @@ public class PowerPlayAuto extends LinearOpMode {
     }
 
 
-    /* Declare OpMode members. */
-    private DcMotor left_front = null;
-    private DcMotor right_front = null;
-    private DcMotor left_back = null;
-    private DcMotor right_back = null;
-    private BNO055IMU imu = null;      // Control/Expansion Hub IMU
-
-    private double robotHeading = 0;
-    private double headingOffset = 0;
-    private double headingError = 0;
-
-
-    // These variable are declared here (as class members) so they can be updated in various methods,
-    // but still be displayed by sendTelemetry()
-    private double targetHeading = 0;
-    private double driveSpeed = 0;
-    private double turnSpeed = 0;
-    private double leftSpeed = 0;
-    private double rightSpeed = 0;
-    private int leftTarget = 0;
-    private int rightTarget = 0;
-
-    // Calculate the COUNTS_PER_INCH for your specific drive train.
-    // Go to your motor vendor website to determine your motor's COUNTS_PER_MOTOR_REV
-    // For external drive gearing, set DRIVE_GEAR_REDUCTION as needed.
-    // For example, use a value of 2.0 for a 12-tooth spur gear driving a 24-tooth spur gear.
-    // This is gearing DOWN for less speed and more torque.
-    // For gearing UP, use a gear ratio less than 1.0. Note this will affect the direction of wheel rotation.
-    static final double COUNTS_PER_MOTOR_REV = 1150; //537.7 ;   // eg: GoBILDA 312 RPM Yellow Jacket
-    static final double DRIVE_GEAR_REDUCTION = 1.0;     // No External Gearing.
-    static final double WHEEL_DIAMETER_INCHES = 4.0;     // For figuring circumference
-    static final double COUNTS_PER_INCH = 40;// (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
-    //(WHEEL_DIAMETER_INCHES * 3.1415);
-
-    // These constants define the desired driving/control characteristics
-    // They can/should be tweaked to suit the specific robot drive train.
-    static final double DRIVE_SPEED = 0.3;     // Max driving speed for better distance accuracy.
-    static final double TURN_SPEED = 0.2;     // Max Turn speed to limit turn rate
-    static final double HEADING_THRESHOLD = 0.2;    // How close must the heading get to the target before moving to next step.
-    // Requiring more accuracy (a smaller number) will often make the turn take longer to get into the final position.
-    // Define the Proportional control coefficient (or GAIN) for "heading control".
-    // We define one value when Turning (larger errors), and the other is used when Driving straight (smaller errors).
-    // Increase these numbers if the heading does not corrects strongly enough (eg: a heavy robot or using tracks)
-    // Decrease these numbers if the heading does not settle on the correct value (eg: very agile robot with omni wheels)
-    static final double P_TURN_GAIN = 0.01;     // Larger is more responsive, but also less stable
-    static final double P_DRIVE_GAIN = 0.02;     // Larger is more responsive, but also less stable
-
     @Override
     public void runOpMode() {
 
-        // ================== start of VISION ========================
-        initVuforia();
-        initTfod();
-
-        if (tfod != null) {
-            tfod.activate();
-            tfod.setZoom(2, 16.0 / 9.0);
-        }
-
         // ================== end of VISION =========================
-
         left_back = hardwareMap.get(DcMotor.class, "left_back");
         right_back = hardwareMap.get(DcMotor.class, "right_back");
         right_front = hardwareMap.get(DcMotor.class, "right_front");
         left_front = hardwareMap.get(DcMotor.class, "left_front");
-        claw = hardwareMap.get(Servo.class, "claw");
-        linearAsDcMotor = hardwareMap.get(DcMotor.class, "arm");
 
 
         left_front.setPower(left_front.getPower() / 3.6858974359);
-
-        // Old
-        // left_front.setDirection(DcMotor.Direction.FORWARD);
-        // right_front.setDirection(DcMotor.Direction.REVERSE);
-        // left_back.setDirection(DcMotor.Direction.REVERSE);
-        // right_back.setDirection(DcMotor.Direction.FORWARD);
-        // New
         left_front.setDirection(DcMotor.Direction.REVERSE);
         right_front.setDirection(DcMotor.Direction.FORWARD);
         left_back.setDirection(DcMotor.Direction.REVERSE);
         right_back.setDirection(DcMotor.Direction.FORWARD);
-
-        // define initialization values for IMU, and then initialize it.
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-        imu.initialize(parameters);
-
-        imu.startAccelerationIntegration(null, null, 100);
-        RobotLog.ii("IMU", imu.getClass().getName());
         // Ensure the robot is stationary.  Reset the encoders and set the motors to BRAKE mode
         left_front.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         right_front.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -219,13 +117,28 @@ public class PowerPlayAuto extends LinearOpMode {
         left_back.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         right_back.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        if (!cameraTest) {
+            claw = hardwareMap.get(Servo.class, "claw");
+            linearAsDcMotor = hardwareMap.get(DcMotor.class, "arm");
 
-        targets.activate();
-        claw.setPosition(0.5);
+            claw.setPosition(0.5);
+        }
+
+        // define initialization values for IMU, and then initialize it.
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+
+        imu.startAccelerationIntegration(null, null, 100);
+        RobotLog.ii("IMU", imu.getClass().getName());
+
+
+        initOpenCV();
 
         // Wait for the game to start (Display Gyro value while waiting)
         while (opModeInInit() && !isStopRequested()) {
-            //detectCone();
+            detectCone();
             //detectPos();
             sendTelemetry(true);
 
@@ -248,36 +161,108 @@ public class PowerPlayAuto extends LinearOpMode {
         left_back.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         right_back.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        // left_front.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        // right_front.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        // left_back.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        // right_back.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
         resetHeading();
 
-        // Distance for auto mode.
-        double l = 24;
-
-        autoMode = 1;
-
-        int powerset = 0;
-
-        autoMode(l);
+        autoMode(0);
 
     }
 
+    // ******** Fields and settings
 
-    int autoMode() {
-        if (gamepad1.x) {
-            autoMode = 0;
-        }
-        if (gamepad1.a) {
-            autoMode = 1;
-        }
-        return autoMode;
+    private DcMotor left_front = null;
+    private DcMotor right_front = null;
+    private DcMotor left_back = null;
+    private DcMotor right_back = null;
+    private Servo claw;
+    private DcMotor linearAsDcMotor;
+    private BNO055IMU imu = null;      // Control/Expansion Hub IMU
+
+    // From move
+    private double robotHeading = 0;
+    private double headingOffset = 0;
+    private double headingError = 0;
+    private double targetHeading = 0;
+    private double driveSpeed = 0;
+    private double turnSpeed = 0;
+    private double leftSpeed = 0;
+    private double rightSpeed = 0;
+    private int leftTarget = 0;
+    private int rightTarget = 0;
+
+    static final double COUNTS_PER_INCH = 40;
+
+    // These constants define the desired driving/control characteristics
+    // They can/should be tweaked to suit the specific robot drive train.
+    static final double DRIVE_SPEED = 0.3;     // Max driving speed for better distance accuracy.
+    static final double TURN_SPEED = 0.2;     // Max Turn speed to limit turn rate
+    static final double HEADING_THRESHOLD = 0.2;    // How close must the heading get to the target before moving to next step.
+
+    // Requiring more accuracy (a smaller number) will often make the turn take longer to get into the final position.
+    // Define the Proportional control coefficient (or GAIN) for "heading control".
+    // We define one value when Turning (larger errors), and the other is used when Driving straight (smaller errors).
+    // Increase these numbers if the heading does not corrects strongly enough (eg: a heavy robot or using tracks)
+    // Decrease these numbers if the heading does not settle on the correct value (eg: very agile robot with omni wheels)
+    static final double P_TURN_GAIN = 0.01;     // Larger is more responsive, but also less stable
+    static final double P_DRIVE_GAIN = 0.02;     // Larger is more responsive, but also less stable
+
+    static boolean cameraTest = false;
+
+    double driveSpeed1 = DRIVE_SPEED;
+
+    // ********** High level driving ****************
+
+    public void move(double distance, double heading) {
+        driveStraight(driveSpeed1, distance, heading);
     }
 
-    // **********  HIGH Level driving functions.  ********************
+    public void turn(double heading) {
+        turnToHeading(TURN_SPEED, heading);
+        holdHeading(TURN_SPEED, heading, 0.6);
+    }
+
+    /**
+     * Display the various control parameters while driving
+     *
+     * @param straight Set to true if we are driving straight, and the encoder positions should be included in the telemetry.
+     */
+    private void sendTelemetry(boolean straight) {
+        //Orientation orientation = imu.getAngularOrientation();
+        //telemetry.addData("Compass", "%.2f Raw: %.2f", robotHeading, orientation.firstAngle);
+
+        if (straight) {
+            telemetry.addData("Motion", "Drive Straight");
+        } else {
+            telemetry.addData("Motion", "Turning");
+        }
+        telemetry.addData("MotorEncoders LF:RF", "%7d:%7d", left_front.getCurrentPosition(), right_front.getCurrentPosition());
+        telemetry.addData("MotorEncoders LB:RB", "%7d:%7d", left_back.getCurrentPosition(), right_back.getCurrentPosition());
+        telemetry.addData("MotorEncoders LF:RF inch", "%7f:%7f", left_front.getCurrentPosition() / COUNTS_PER_INCH, right_front.getCurrentPosition() / COUNTS_PER_INCH);
+        telemetry.addData("Target Pos L:R", "%7d:%7d", leftTarget, rightTarget);
+
+        telemetry.addData("Angle Target:Current", "%5.2f:%5.0f", targetHeading, robotHeading);
+
+        telemetry.addData("Error:Steer", "%5.1f:%5.1f", headingError, turnSpeed);
+        telemetry.addData("Wheel Speeds L:R.", "%5.2f : %5.2f", leftSpeed, rightSpeed);
+
+        telemetry.addData("Manual F:T:A.", "L: %5.2f : %5.2f R: %5.2f %5.2f", gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.right_stick_y);
+
+        // Provide feedback as to where the robot is located (if we know).
+        if (objDetected != 0) {
+            telemetry.addData("Object detected", "%d", objDetected);
+        }
+        if (latestDetections != null ) {
+            for (AprilTagDetection det : latestDetections) {
+                telemetry.addData("Detected" + det.id, "margin=%4.2f x=%4.2f y=%4.2f pose %4.2f/%4.2f/%4.2f PRY %4.2f/%4.2f %4.2f",
+                        det.decisionMargin, det.center.x, det.center.y,
+                        det.pose.x, det.pose.y, det.pose.z, det.pose.pitch, det.pose.roll, det.pose.yaw);
+            }
+        }
+
+        telemetry.update();
+
+    }
+
+    // **********  Low Level driving functions.  ********************
 
     /**
      * Method to drive in a straight line, on a fixed compass heading (angle), based on encoder counts.
@@ -416,28 +401,6 @@ public class PowerPlayAuto extends LinearOpMode {
         }
 
     }
-
-
-    double driveSpeed1 = DRIVE_SPEED;
-
-    public void move(double distance, double heading) {
-        if (autoMode() != 1) {
-            return ;
-        }
-        driveStraight(driveSpeed1, distance, heading);
-    }
-
-    public void turn(double heading) {
-        if (autoMode() != 1) {
-            return ;
-        }
-        turnToHeading(TURN_SPEED, heading);
-        if (autoMode() != 1) {
-            return ;
-        }
-        holdHeading(TURN_SPEED, heading, 0.6);
-    }
-
     /**
      * Method to spin on central axis to point in a new direction.
      * Move will stop if either of these conditions occur:
@@ -509,8 +472,6 @@ public class PowerPlayAuto extends LinearOpMode {
         moveRobot(0, 0);
     }
 
-    // **********  LOW Level driving functions.  ********************
-
     /**
      * This method uses a Proportional Controller to determine how much steering correction is required.
      *
@@ -566,10 +527,10 @@ public class PowerPlayAuto extends LinearOpMode {
         left_back.setPower(leftSpeed);
         right_back.setPower(rightSpeed);
 
-        RobotLog.ii("MOVE", "(%f %f) HEADING: %f SPEED: %f %f REAL: %d %d IMU: %f %f %s",
-                drive, turn, robotHeading,
-                leftSpeed, rightSpeed, left_front.getCurrentPosition(), right_front.getCurrentPosition(),
-                imu.getPosition().x, imu.getPosition().y, trackable0.getLocation().toString());
+//        RobotLog.ii("MOVE", "(%f %f) HEADING: %f SPEED: %f %f REAL: %d %d IMU: %f %f",
+//                drive, turn, robotHeading,
+//                leftSpeed, rightSpeed, left_front.getCurrentPosition(), right_front.getCurrentPosition(),
+//                imu.getPosition().x, imu.getPosition().y);
 
     }
 
@@ -602,53 +563,6 @@ public class PowerPlayAuto extends LinearOpMode {
     }
 
     /**
-     * Display the various control parameters while driving
-     *
-     * @param straight Set to true if we are driving straight, and the encoder positions should be included in the telemetry.
-     */
-    private void sendTelemetry(boolean straight) {
-        detectPos();
-        Orientation orientation = imu.getAngularOrientation();
-        telemetry.addData("Compass", "%.2f Raw: %.2f", robotHeading, orientation.firstAngle);
-
-        if (straight) {
-            telemetry.addData("Motion", "Drive Straight");
-        } else {
-            telemetry.addData("Motion", "Turning");
-        }
-        telemetry.addData("MotorEncoders LF:RF", "%7d:%7d", left_front.getCurrentPosition(), right_front.getCurrentPosition());
-        telemetry.addData("MotorEncoders LB:RB", "%7d:%7d", left_back.getCurrentPosition(), right_back.getCurrentPosition());
-        telemetry.addData("MotorEncoders LF:RF inch", "%7f:%7f", left_front.getCurrentPosition() / COUNTS_PER_INCH, right_front.getCurrentPosition() / COUNTS_PER_INCH);
-        telemetry.addData("Target Pos L:R", "%7d:%7d", leftTarget, rightTarget);
-
-        telemetry.addData("Angle Target:Current", "%5.2f:%5.0f", targetHeading, robotHeading);
-
-        telemetry.addData("Error:Steer", "%5.1f:%5.1f", headingError, turnSpeed);
-        telemetry.addData("Wheel Speeds L:R.", "%5.2f : %5.2f", leftSpeed, rightSpeed);
-
-        telemetry.addData("Manual F:T:A.", "L: %5.2f : %5.2f R: %5.2f %5.2f",  gamepad1.left_stick_x, gamepad1.left_stick_y,gamepad1.right_stick_x, gamepad1.right_stick_y);
-
-        // Provide feedback as to where the robot is located (if we know).
-        if (targetVisible) {
-            // express position (translation) of robot in inches.
-            VectorF translation = lastLocation.getTranslation();
-            telemetry.addData("WuPos (inches)", "{X, Y, Z} = %.1f, %.1f",
-                    translation.get(0) / mmPerInch, translation.get(1) / mmPerInch);
-
-            // express the rotation of the robot in degrees.
-            Orientation rotation = Orientation.getOrientation(lastLocation, EXTRINSIC, XYZ, DEGREES);
-            telemetry.addData("WuRot (deg)", "%.0f %s", rotation.thirdAngle, visibleTarget);
-        } else {
-            telemetry.addData("Visible Target", "none");
-        }
-        if (objDetected != 0) {
-            telemetry.addData("Object detected", "%d %s", objDetected, detectDebug);
-        }
-        telemetry.update();
-
-    }
-
-    /**
      * read the raw (un-offset Gyro heading) directly from the IMU
      */
     public double getRawHeading() {
@@ -665,111 +579,67 @@ public class PowerPlayAuto extends LinearOpMode {
         robotHeading = 0;
     }
 
+
     // ================= start of VISION ================================
     // The detected object
+
     int objDetected = 0;
-    String detectDebug = "NOT DETECTED";
-    private static final String TFOD_MODEL_ASSET = "PowerPlay.tflite";
-    private static final String[] LABELS = {
-            "1",
-            "2",
-            "3"
-    };
-    private static final String VUFORIA_KEY =
-            "AQfUdZ7/////AAABmTx3uU3M+k/Zgk6XCTX72l94MLmYeIbID02kJBsECtoY0YQHwRWxBjq0p8qlLd5fic84APyKoKoz3+ZYhP5ugl0kMsQBYp+SSFyVdRIfKhaMuJYbMBj6t6P053i50Am0C0WzMJCRiuLa2LILZivOeKIsDCE7ehd8r4wTmBgHq4YTbhbxN+QjiiZHtD9g2UkMn/inNqtOXN8Kcf0k+8KGHyrOjekFWlzPklyfEUbw5EnPWW5nDbzLKg7jTLBAzN7Pv6jDrYNjcrEFqvNqgyn17kwmHq/tN+I2nGctAzGl98EufbcbJW/JJIs/jAOUcrtSAfxssbwnWjgA5Iuz5kshmclDDtqWTqWATu2sYVY+YuN1";
-    private VuforiaLocalizer vuforia;
-    private TFObjectDetector tfod;
-    OpenGLMatrix lastLocation = null;
-    private VuforiaTrackables targets;
-    private VuforiaTrackable trackable0;
-    private ArrayList<VuforiaTrackable> allTrackables;
+
     // Since ImageTarget trackables use mm to specifiy their dimensions, we must use mm for all the physical dimension.
     // We will define some constants and conversions here
     private static final float mmPerInch = 25.4f;
-    private static final float mmTargetHeight = 6 * mmPerInch;          // the height of the center of the target image above the floor
-    private static final float halfField = 72 * mmPerInch;
-    private static final float halfTile = 12 * mmPerInch;
-    private static final float oneAndHalfTile = 36 * mmPerInch;
-    private boolean targetVisible;
-    private String visibleTarget;
-    private int autoMode;
-    private Servo claw;
-    private DcMotor linearAsDcMotor;
-    private double stickDriveForward;
-    private double turn;
-    private double armLevel;
+    OpenCvCamera camera;
+    AprilTagDetectionPipeline aprilTagDetectionPipeline;
 
-    private void initVuforia() {
-        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
-        parameters.vuforiaLicenseKey = VUFORIA_KEY;
-        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
-        parameters.useExtendedTracking = true;
+    static final double FEET_PER_METER = 3.28084;
 
+    // Lens intrinsics
+    // UNITS ARE PIXELS
+    // NOTE: this calibration is for the C920 webcam at 800x448.
+    // You will need to do your own calibration for other configurations!
+    double fx = 578.272;
+    double fy = 578.272;
+    double cx = 402.145;
+    double cy = 221.506;
+
+    // UNITS ARE METERS
+    double tagsize = 0.166;
+
+    int numFramesWithoutDetection = 0;
+
+    final float DECIMATION_HIGH = 3;
+    final float DECIMATION_LOW = 2;
+    final float THRESHOLD_HIGH_DECIMATION_RANGE_METERS = 1.0f;
+    final int THRESHOLD_NUM_FRAMES_NO_DETECTION_BEFORE_LOW_DECIMATION = 4;
+
+
+    private void initOpenCV() {
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        parameters.cameraMonitorViewIdParent = cameraMonitorViewId;
+        WebcamName hcam = hardwareMap.get(WebcamName.class, "Webcam 1");
+        camera = OpenCvCameraFactory.getInstance().createWebcam(hcam, cameraMonitorViewId);
+        aprilTagDetectionPipeline = new AprilTagDetectionPipeline(tagsize, fx, fy, cx, cy);
+        camera.showFpsMeterOnViewport(false);
 
-        vuforia = ClassFactory.getInstance().createVuforia(parameters);
+        RobotLog.ee("OpenCV", "Camera %5.2f %s", camera.getFps(), camera);
+        camera.setPipeline(aprilTagDetectionPipeline);
 
-        targets = this.vuforia.loadTrackablesFromAsset("PowerPlay");
+        // Don't show on device screen
+        // camera.pauseViewport();
 
-        // For convenience, gather together all the trackable objects in one easily-iterable collection */
-        allTrackables = new ArrayList<VuforiaTrackable>();
-        allTrackables.addAll(targets);
+        camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
+            @Override
+            public void onOpened() {
+                camera.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT);
+                //camera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
+            }
 
-        // Name and locate each trackable object
-        identifyTarget(0, "Red Audience Wall", -halfField, -oneAndHalfTile, mmTargetHeight, 90, 0, 90);
-        identifyTarget(1, "Red Rear Wall", halfField, -oneAndHalfTile, mmTargetHeight, 90, 0, -90);
-        identifyTarget(2, "Blue Audience Wall", -halfField, oneAndHalfTile, mmTargetHeight, 90, 0, 90);
-        identifyTarget(3, "Blue Rear Wall", halfField, oneAndHalfTile, mmTargetHeight, 90, 0, -90);
-
-        trackable0 = targets.get(0);
-        trackable0.setName("powerPlay"); // can help in debugging; otherwise not necessary
-
-
-        final float CAMERA_FORWARD_DISPLACEMENT = 0.0f * mmPerInch;   // eg: Enter the forward distance from the center of the robot to the camera lens
-        final float CAMERA_VERTICAL_DISPLACEMENT = 6.0f * mmPerInch;   // eg: Camera is 6 Inches above ground
-        final float CAMERA_LEFT_DISPLACEMENT = 0.0f * mmPerInch;   // eg: Enter the left distance from the center of the robot to the camera lens
-
-        OpenGLMatrix cameraLocationOnRobot = OpenGLMatrix
-                .translation(CAMERA_FORWARD_DISPLACEMENT, CAMERA_LEFT_DISPLACEMENT, CAMERA_VERTICAL_DISPLACEMENT)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XZY, DEGREES, 90, 90, 0));
-
-        /**  Let all the trackable listeners know where the camera is.  */
-        for (VuforiaTrackable trackable : allTrackables) {
-            ((VuforiaTrackableDefaultListener) trackable.getListener()).setCameraLocationOnRobot(parameters.cameraName, cameraLocationOnRobot);
-        }
+            @Override
+            public void onError(int errorCode) {
+                RobotLog.ee("OpenCV", "Error %d", errorCode);
+            }
+        });
     }
 
-
-    /***
-     * Identify a target by naming it, and setting its position and orientation on the field
-     * @param targetIndex
-     * @param targetName
-     * @param dx, dy, dz  Target offsets in x,y,z axes
-     * @param rx, ry, rz  Target rotations in x,y,z axes
-     */
-    void identifyTarget(int targetIndex, String targetName, float dx, float dy, float dz, float rx, float ry, float rz) {
-        VuforiaTrackable aTarget = targets.get(targetIndex);
-        aTarget.setName(targetName);
-        aTarget.setLocation(OpenGLMatrix.translation(dx, dy, dz)
-                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, rx, ry, rz)));
-    }
-
-    /**
-     * Initialize the TensorFlow Object Detection engine.
-     */
-    private void initTfod() {
-        int tfodMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
-                "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
-        //tfodParameters.minResultConfidence = 0.75f;
-        tfodParameters.minResultConfidence = 0.5f;
-        tfodParameters.isModelTensorFlow2 = true;
-        tfodParameters.inputSize = 300;
-
-        tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
-        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABELS);
-    }
 
     private void detect() {
         long startVision = System.currentTimeMillis();
@@ -781,51 +651,32 @@ public class PowerPlayAuto extends LinearOpMode {
             }
             ;
         }
-        if (objDetected > 0) {
-            RobotLog.ii("DETECT", detectDebug);
-        }
     }
 
     private boolean detectCone() {
-        List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+        latestDetections = aprilTagDetectionPipeline.getLatestDetections();
 
-        if (updatedRecognitions != null) {
-            for (Recognition recognition : updatedRecognitions) {
-                double col = (recognition.getLeft() + recognition.getRight()) / 2;
-                double row = (recognition.getTop() + recognition.getBottom()) / 2;
-                double width = Math.abs(recognition.getRight() - recognition.getLeft());
-                double height = Math.abs(recognition.getTop() - recognition.getBottom());
-
-                objDetected = Integer.parseInt(recognition.getLabel());
-
-                detectDebug = "FOUND " + objDetected + " " +
-                        recognition.getLabel() + " " + recognition.getConfidence() * 100;
-                //RobotLog.ii("DETECT", "%d %f %s", objDetected, recognition.getConfidence(), recognition.getLabel());
-
+        // 0 == 1
+        // 12 == 3
+        // 11 == 2
+        for (AprilTagDetection det : latestDetections) {
+            if (det.id == 0) {
+                objDetected = 1;
+                return true;
+            }
+            if (det.id == 12) {
+                objDetected = 3;
+                return true;
+            }
+            if (det.id == 11) {
+                objDetected = 2;
                 return true;
             }
         }
+
         return false;
     }
 
-    private void detectPos() {
-        targetVisible = false;
-
-        for (VuforiaTrackable trackable : allTrackables) {
-            if (((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible()) {
-                telemetry.addData("Visible Target", trackable.getName());
-                targetVisible = true;
-                // getUpdatedRobotLocation() will return null if no new information is available since
-                // the last time that call was made, or if the trackable is not currently visible.
-                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
-                if (robotLocationTransform != null) {
-                    lastLocation = robotLocationTransform;
-                    visibleTarget = trackable.getName();
-                }
-                break;
-            }
-        }
-    }
 
     // ----------------------- END VISION -----------------------------
 
